@@ -2,6 +2,12 @@
     import type { TSong } from "../types";
     import * as d3 from "d3";
 
+    type AnyScale =
+        | d3.ScaleBand<string>
+        | d3.ScaleLinear<number, number>
+        | d3.ScaleLogarithmic<number, number>
+        | d3.ScaleTime<number, number>;
+
     type TProps = {
         songs: TSong[];
         x: keyof TSong; // for simplicity, we assume x
@@ -49,11 +55,16 @@
         Array.from(new Set(songs.map((song) => getGenre(song)))).sort(),
     );
 
+    function applyScale(scale: AnyScale | null, value: unknown): number {
+        if (!scale) return 0;
+        return (scale as (v: any) => number)(value);
+    }
+
     function getScale(
         attrName: keyof TSong,
         axis: "x" | "y" | "color" | "size",
         songs: TSong[],
-    ) {
+    ): AnyScale | null {
         if (songs.length == 0) {
             return null;
         }
@@ -135,28 +146,28 @@
     const xScale = $derived(getScale(x, "x", filteredSongs));
     const yScale = $derived(getScale(y, "y", filteredSongs));
 
-    let xAxes: any = $state([]),
-        yAxes: any = $state([]);
+    let xAxes: SVGGElement[] = $state([]),
+        yAxes: SVGGElement[] = $state([]);
 
     function updateAxes() {
         if (!xScale || !yScale) {
             return;
         }
 
-        xAxes.forEach((axis) => {
+        xAxes.forEach((axis: SVGGElement) => {
             if (!axis) return;
 
             d3.select(axis)
-                .call(d3.axisBottom(xScale))
+                .call(d3.axisBottom(xScale as d3.AxisScale<d3.AxisDomain>))
                 .selectAll("text")
                 .attr("transform", "rotate(60)")
                 .style("text-anchor", "start");
         });
 
-        yAxes.forEach((axis) => {
+        yAxes.forEach((axis: SVGGElement) => {
             if (!axis) return;
 
-            d3.select(axis).call(d3.axisLeft(yScale));
+            d3.select(axis).call(d3.axisLeft(yScale as d3.AxisScale<d3.AxisDomain>));
         });
     }
 
@@ -194,9 +205,9 @@
                             <!-- svelte-ignore a11y_click_events_have_key_events -->
                             <!-- svelte-ignore a11y_no_static_element_interactions -->
                             <circle
-                                cx={xScale ? xScale(song[x]) : usableArea.left}
+                                cx={xScale ? applyScale(xScale, song[x]) : usableArea.left}
                                 cy={yScale
-                                    ? yScale(Math.max(1, song[y] as number))
+                                    ? applyScale(yScale, Math.max(1, song[y] as number))
                                     : usableArea.bottom}
                                 r={getPointrad(song)}
                                 fill={getPointFill(song)}
