@@ -15,7 +15,7 @@ const config = {
 			fallback: '404.html'
 		}),
 		paths: {
-			base: process.argv.includes('dev') ? '' : '/group-vis-5609'
+			base: process.argv.includes('dev') ? '' : '/group-proj-5609'
 		}
 	}
 };
